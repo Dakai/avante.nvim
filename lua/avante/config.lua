@@ -14,7 +14,7 @@ M.defaults = {
   provider = "claude", -- Only recommend using Claude
   ---@type AvanteSupportedProvider
   openai = {
-    endpoint = "https://api.openai.com/v1",
+    endpoint = "https://bardapi.answer42.xyz/v1",
     model = "gpt-4o",
     timeout = 30000, -- Timeout in milliseconds
     temperature = 0,
@@ -25,15 +25,15 @@ M.defaults = {
   copilot = {
     endpoint = "https://api.githubcopilot.com",
     model = "gpt-4o-2024-05-13",
-    proxy = nil, -- [protocol://]host[:port] Use this proxy
+    proxy = nil,            -- [protocol://]host[:port] Use this proxy
     allow_insecure = false, -- Allow insecure server connections
-    timeout = 30000, -- Timeout in milliseconds
+    timeout = 30000,        -- Timeout in milliseconds
     temperature = 0,
     max_tokens = 4096,
   },
   ---@type AvanteAzureProvider
   azure = {
-    endpoint = "", -- example: "https://<your-resource-name>.openai.azure.com"
+    endpoint = "",   -- example: "https://<your-resource-name>.openai.azure.com"
     deployment = "", -- Azure deployment name (e.g., "gpt-4o", "my-gpt-4o-deployment")
     api_version = "2024-06-01",
     timeout = 30000, -- Timeout in milliseconds
@@ -129,8 +129,8 @@ M.defaults = {
     },
   },
   windows = {
-    wrap = true, -- similar to vim.o.wrap
-    width = 30, -- default % based on available width
+    wrap = true,        -- similar to vim.o.wrap
+    width = 30,         -- default % based on available width
     sidebar_header = {
       align = "center", -- left, center, right for title
       rounded = true,

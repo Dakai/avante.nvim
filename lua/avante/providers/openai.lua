@@ -25,7 +25,8 @@ local P = require("avante.providers")
 ---@class AvanteProviderFunctor
 local M = {}
 
-M.api_key_name = "OPENAI_API_KEY"
+--M.api_key_name = "OPENAI_API_KEY"
+M.api_key_name = "GOOGLEAI_API_KEY"
 
 M.parse_message = function(opts)
   local user_prompt = ""
@@ -52,7 +53,7 @@ M.parse_message = function(opts)
 
   return {
     { role = "system", content = opts.system_prompt },
-    { role = "user", content = user_content },
+    { role = "user",   content = user_content },
   }
 end
 
