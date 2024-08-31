@@ -28,11 +28,13 @@ local M = {}
 --M.api_key_name = "OPENAI_API_KEY"
 M.api_key_name = "GOOGLEAI_API_KEY"
 
+---@param opts AvantePromptOptions
+M.get_user_message = function(opts)
+  return table.concat(opts.user_prompts, "\n\n")
+end
+
 M.parse_message = function(opts)
-  local user_prompt = ""
-  for _, user_prompt_ in ipairs(opts.user_prompts) do
-    user_prompt = user_prompt .. "\n\n" .. user_prompt_
-  end
+  local user_prompt = table.concat(opts.user_prompts, "\n\n")
 
   ---@type string | OpenAIMessage[]
   local user_content

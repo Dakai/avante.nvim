@@ -12,6 +12,12 @@ M.defaults = {
   debug = false,
   ---@alias Provider "claude" | "openai" | "azure" | "gemini" | "cohere" | "copilot" | string
   provider = "claude", -- Only recommend using Claude
+  ---@alias Tokenizer "tiktoken" | "hf"
+  -- Used for counting tokens and encoding text.
+  -- By default, we will use tiktoken.
+  -- For most providers that we support we will determine this automatically.
+  -- If you wish to use a given implementation, then you can override it here.
+  tokenizer = "tiktoken",
   ---@type AvanteSupportedProvider
   openai = {
     endpoint = "https://bardapi.answer42.xyz/v1",
@@ -62,10 +68,10 @@ M.defaults = {
   ---@type AvanteSupportedProvider
   cohere = {
     endpoint = "https://api.cohere.com/v1",
-    model = "command-r-plus",
+    model = "command-r-plus-08-2024",
     timeout = 30000, -- Timeout in milliseconds
     temperature = 0,
-    max_tokens = 3072,
+    max_tokens = 4096,
     ["local"] = false,
   },
   ---To add support for custom provider, follow the format below
@@ -231,9 +237,15 @@ M = setmetatable(M, {
   end,
 })
 
-M.support_paste_image = function()
+---@param skip_warning? boolean
+M.support_paste_image = function(skip_warning)
+  skip_warning = skip_warning or M.silent_warning
+  if skip_warning then
+    return
+  end
+
   local supported = Utils.has("img-clip.nvim") or Utils.has("img-clip")
-  if not supported and not M.options.silent_warning then
+  if not supported then
     Utils.warn("img-clip.nvim is not installed. Pasting image will be disabled.", { once = true })
   end
   return supported

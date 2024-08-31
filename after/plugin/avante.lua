@@ -3,11 +3,13 @@
 local Clipboard = require("avante.clipboard")
 local Config = require("avante.config")
 
-if Config.support_paste_image() then
+if Config.support_paste_image(true) then
   vim.paste = (function(overriden)
     ---@param lines string[]
     ---@param phase -1|1|2|3
     return function(lines, phase)
+      require("img-clip.util").verbose = false
+
       local bufnr = vim.api.nvim_get_current_buf()
       local filetype = vim.api.nvim_get_option_value("filetype", { buf = bufnr })
       if filetype ~= "AvanteInput" then
