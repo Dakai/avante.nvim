@@ -18,6 +18,8 @@ M.defaults = {
   -- For most providers that we support we will determine this automatically.
   -- If you wish to use a given implementation, then you can override it here.
   tokenizer = "tiktoken",
+  ---@type "vertical" | "horizontal"
+  layout = "vertical",
   ---@type AvanteSupportedProvider
   openai = {
     endpoint = "https://bardapi.answer42.xyz/v1",
@@ -136,7 +138,8 @@ M.defaults = {
   },
   windows = {
     wrap = true,        -- similar to vim.o.wrap
-    width = 30,         -- default % based on available width
+    width = 30,         -- default % based on available width in vertical layout
+    height = 30,        -- default % based on available height in horizontal layout
     sidebar_header = {
       align = "center", -- left, center, right for title
       rounded = true,
@@ -244,11 +247,7 @@ M.support_paste_image = function(skip_warning)
     return
   end
 
-  local supported = Utils.has("img-clip.nvim") or Utils.has("img-clip")
-  if not supported then
-    Utils.warn("img-clip.nvim is not installed. Pasting image will be disabled.", { once = true })
-  end
-  return supported
+  return Utils.has("img-clip.nvim") or Utils.has("img-clip")
 end
 
 M.get_window_width = function()
@@ -286,6 +285,7 @@ M.BASE_PROVIDER_KEYS = {
   -- internal
   "local",
   "_shellenv",
+  "tokenizer_id",
 }
 
 ---@return {width: integer, height: integer}

@@ -102,7 +102,12 @@ function Selection:close_editing_input()
   end
   if self.cursor_pos and self.code_winid then
     vim.schedule(function()
-      api.nvim_win_set_cursor(self.code_winid, { self.cursor_pos[1], self.cursor_pos[2] })
+      local bufnr = api.nvim_win_get_buf(self.code_winid)
+      local line_count = api.nvim_buf_line_count(bufnr)
+      local row = math.min(self.cursor_pos[1], line_count)
+      local line = api.nvim_buf_get_lines(bufnr, row - 1, row, true)[1] or ""
+      local col = math.min(self.cursor_pos[2], #line)
+      api.nvim_win_set_cursor(self.code_winid, { row, col })
     end)
   end
   if self.editing_input_bufnr and api.nvim_buf_is_valid(self.editing_input_bufnr) then
@@ -372,13 +377,14 @@ function Selection:create_editing_input()
 
     local original_first_line_indentation = Utils.get_indentation(code_lines[self.selection.range.start.line])
 
+    local need_prepend_indentation = false
+
     api.nvim_exec_autocmds("User", { pattern = EDITING_INPUT_START_SPINNER_PATTERN })
     ---@type AvanteChunkParser
     local on_chunk = function(chunk)
       full_response = full_response .. chunk
       local response_lines = vim.split(full_response, "\n")
-      local need_prepend_indentation = false
-      if #response_lines > 0 then
+      if #response_lines == 1 then
         local first_line = response_lines[1]
         local first_line_indentation = Utils.get_indentation(first_line)
         need_prepend_indentation = first_line_indentation ~= original_first_line_indentation

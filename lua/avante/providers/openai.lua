@@ -27,6 +27,7 @@ local M = {}
 
 --M.api_key_name = "OPENAI_API_KEY"
 M.api_key_name = "GOOGLEAI_API_KEY"
+M.tokenizer_id = "gpt-4o"
 
 ---@param opts AvantePromptOptions
 M.get_user_message = function(opts)

@@ -4,7 +4,7 @@ local fn = vim.fn
 local Split = require("nui.split")
 local event = require("nui.utils.autocmd").event
 
-local History = require("avante.history")
+local Path = require("avante.path")
 local Config = require("avante.config")
 local Diff = require("avante.diff")
 local Llm = require("avante.llm")
@@ -420,34 +420,34 @@ local function ensure_snippets_no_overlap(original_content, snippets)
   return result
 end
 
-local function get_conflict_content(content, snippets)
+local function insert_conflict_contents(bufnr, snippets)
   -- sort snippets by start_line
   table.sort(snippets, function(a, b)
     return a.range[1] < b.range[1]
   end)
 
+  local content = table.concat(Utils.get_buf_lines(0, -1, bufnr), "\n")
+
   local lines = vim.split(content, "\n")
-  local result = {}
-  local current_line = 1
+
+  local offset = 0
 
   for _, snippet in ipairs(snippets) do
     local start_line, end_line = unpack(snippet.range)
 
-    while current_line < start_line do
-      table.insert(result, lines[current_line])
-      current_line = current_line + 1
-    end
-
     local need_prepend_indentation = false
     local original_start_line_indentation = Utils.get_indentation(lines[start_line] or "")
 
+    local result = {}
     table.insert(result, "<<<<<<< HEAD")
     for i = start_line, end_line do
       table.insert(result, lines[i])
     end
     table.insert(result, "=======")
 
-    for idx, line in ipairs(vim.split(snippet.content, "\n")) do
+    local snippet_lines = vim.split(snippet.content, "\n")
+
+    for idx, line in ipairs(snippet_lines) do
       line = line:gsub("^L%d+: ", "")
       if idx == 1 then
         local indentation = Utils.get_indentation(line)
@@ -461,15 +461,9 @@ local function get_conflict_content(content, snippets)
 
     table.insert(result, ">>>>>>> Snippet")
 
-    current_line = end_line + 1
+    api.nvim_buf_set_lines(bufnr, offset + start_line - 1, offset + end_line, false, result)
+    offset = offset + #snippet_lines + 3
   end
-
-  while current_line <= #lines do
-    table.insert(result, lines[current_line])
-    current_line = current_line + 1
-  end
-
-  return result
 end
 
 ---@param codeblocks table<integer, any>
@@ -539,10 +533,8 @@ function Sidebar:apply(current_cursor)
     end
   end
 
-  local conflict_content = get_conflict_content(content, snippets)
-
   vim.defer_fn(function()
-    api.nvim_buf_set_lines(self.code.bufnr, 0, -1, false, conflict_content)
+    insert_conflict_contents(self.code.bufnr, snippets)
 
     api.nvim_set_current_win(self.code.winid)
     api.nvim_feedkeys(api.nvim_replace_termcodes("<Esc>", true, false, true), "n", true)
@@ -681,7 +673,7 @@ function Sidebar:render_selected_code()
   end
 
   local selected_code_lines_count = 0
-  local selected_code_max_lines_count = 10
+  local selected_code_max_lines_count = 12
 
   if self.code.selection ~= nil then
     local selected_code_lines = vim.split(self.code.selection.content, "\n")
@@ -1170,7 +1162,7 @@ function Sidebar:get_commands()
     end,
     clear = function(args, cb)
       local chat_history = {}
-      History.save(self.code.bufnr, chat_history)
+      Path.history.save(self.code.bufnr, chat_history)
       self:update_content("Chat history cleared", { focus = false, scroll = false })
       vim.defer_fn(function()
         self:close()
@@ -1225,6 +1217,9 @@ function Sidebar:create_selected_code()
       },
     })
     self.selected_code:mount()
+    if Config.layout == "horizontal" then
+      api.nvim_win_set_height(self.result.winid, api.nvim_win_get_height(self.result.winid) - selected_code_size - 3)
+    end
   end
 end
 
@@ -1239,7 +1234,7 @@ function Sidebar:create_input()
     return
   end
 
-  local chat_history = History.load(self.code.bufnr)
+  local chat_history = Path.history.load(self.code.bufnr)
 
   ---@param request string
   local function handle_submit(request)
@@ -1356,7 +1351,7 @@ function Sidebar:create_input()
         request = request,
         response = full_response,
       })
-      History.save(self.code.bufnr, chat_history)
+      Path.history.save(self.code.bufnr, chat_history)
     end
 
     Llm.stream({
@@ -1374,6 +1369,28 @@ function Sidebar:create_input()
     end
   end
 
+  local get_position = function()
+    if Config.layout == "vertical" then
+      return "bottom"
+    end
+    return "right"
+  end
+
+  local get_size = function()
+    if Config.layout == "vertical" then
+      return {
+        height = 8,
+      }
+    end
+
+    local selected_code_size = self:get_selected_code_size()
+
+    return {
+      width = "40%",
+      height = math.max(1, api.nvim_win_get_height(self.result.winid) - selected_code_size),
+    }
+  end
+
   self.input = Split({
     enter = false,
     relative = {
@@ -1381,10 +1398,8 @@ function Sidebar:create_input()
       winid = self.result.winid,
     },
     win_options = vim.tbl_deep_extend("force", get_win_options(), { signcolumn = "yes" }),
-    position = "bottom",
-    size = {
-      height = 8,
-    },
+    position = get_position(),
+    size = get_size(),
   })
 
   local function on_submit()
@@ -1564,15 +1579,41 @@ function Sidebar:get_selected_code_size()
 end
 
 function Sidebar:render()
-  local chat_history = History.load(self.code.bufnr)
+  local chat_history = Path.history.load(self.code.bufnr)
 
-  local sidebar_height = api.nvim_win_get_height(self.code.winid)
-  local selected_code_size = self:get_selected_code_size()
+  local get_position = function()
+    if Config.layout == "vertical" then
+      return "right"
+    end
+    return "bottom"
+  end
+
+  local get_height = function()
+    local selected_code_size = self:get_selected_code_size()
+
+    if Config.layout == "horizontal" then
+      return math.floor(Config.windows.height / 100 * api.nvim_win_get_height(self.code.winid))
+    end
+
+    if Config.layout == "vertical" then
+      return math.max(1, api.nvim_win_get_height(self.code.winid) - selected_code_size - 3 - 8)
+    end
+  end
+
+  local get_width = function()
+    if Config.layout == "vertical" then
+      return math.floor(Config.windows.width / 100 * api.nvim_win_get_width(self.code.winid))
+    end
+
+    if Config.layout == "horizontal" then
+      return math.max(1, api.nvim_win_get_width(self.code.winid))
+    end
+  end
 
   self.result = Split({
     enter = false,
     relative = "editor",
-    position = "right",
+    position = get_position(),
     buf_options = vim.tbl_deep_extend("force", buf_options, {
       modifiable = false,
       swapfile = false,
@@ -1582,8 +1623,8 @@ function Sidebar:render()
     }),
     win_options = get_win_options(),
     size = {
-      width = string.format("%d%%", Config.windows.width),
-      height = math.max(1, sidebar_height - selected_code_size - 3 - 8),
+      width = get_width(),
+      height = get_height(),
     },
   })
 

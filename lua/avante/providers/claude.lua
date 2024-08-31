@@ -6,6 +6,7 @@ local P = require("avante.providers")
 local M = {}
 
 M.api_key_name = "ANTHROPIC_API_KEY"
+M.tokenizer_id = "gpt-4o"
 
 ---@param prompt_opts AvantePromptOptions
 M.parse_message = function(prompt_opts)
@@ -24,13 +25,27 @@ M.parse_message = function(prompt_opts)
     end
   end
 
-  for _, user_prompt in ipairs(prompt_opts.user_prompts) do
+  local user_prompts_with_length = {}
+  for idx, user_prompt in ipairs(prompt_opts.user_prompts) do
+    table.insert(user_prompts_with_length, { idx = idx, length = Utils.tokens.calculate_tokens(user_prompt) })
+  end
+
+  table.sort(user_prompts_with_length, function(a, b)
+    return a.length > b.length
+  end)
+
+  local top_three = {}
+  for i = 1, math.min(3, #user_prompts_with_length) do
+    top_three[user_prompts_with_length[i].idx] = true
+  end
+
+  for idx, prompt_data in ipairs(prompt_opts.user_prompts) do
     local user_prompt_obj = {
       type = "text",
-      text = user_prompt,
+      text = prompt_data,
     }
 
-    if Utils.tokens.calculate_tokens(user_prompt_obj.text) > 1024 then
+    if top_three[idx] then
       user_prompt_obj.cache_control = { type = "ephemeral" }
     end
 
