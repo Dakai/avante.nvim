@@ -18,8 +18,6 @@ M.defaults = {
   -- For most providers that we support we will determine this automatically.
   -- If you wish to use a given implementation, then you can override it here.
   tokenizer = "tiktoken",
-  ---@type "vertical" | "horizontal"
-  layout = "vertical",
   ---@type AvanteSupportedProvider
   openai = {
     endpoint = "https://bardapi.answer42.xyz/v1",
@@ -137,6 +135,11 @@ M.defaults = {
     },
   },
   windows = {
+    wrap = true, -- similar to vim.o.wrap
+    width = 30,  -- default % based on available width in vertical layout
+    height = 30, -- default % based on available height in horizontal layout
+    ---@alias AvantePosition "right" | "left" | "top" | "bottom"
+    position = "right",
     wrap = true,        -- similar to vim.o.wrap
     width = 30,         -- default % based on available width in vertical layout
     height = 30,        -- default % based on available height in horizontal layout
@@ -171,12 +174,10 @@ M.options = {}
 ---@field highlights AvanteConflictHighlights
 M.diff = {}
 
----@class AvanteHintsConfig
----@field enabled boolean
-M.hints = {}
-
 ---@param opts? avante.Config
 function M.setup(opts)
+  vim.validate({ opts = { opts, "table", true } })
+
   M.options = vim.tbl_deep_extend(
     "force",
     M.defaults,
@@ -184,7 +185,7 @@ function M.setup(opts)
     ---@type avante.Config
     {
       behaviour = {
-        support_paste_from_clipboard = M.support_paste_image(),
+        support_paste_from_clipboard = M.support_paste_image(true),
       },
     }
   )
@@ -193,25 +194,28 @@ function M.setup(opts)
     M.options.silent_warning = not M.options.debug
   end
 
+  vim.validate({ provider = { M.options.provider, "string", false } })
+
   M.diff = vim.tbl_deep_extend(
     "force",
     {},
     M.options.diff,
     { mappings = M.options.mappings.diff, highlights = M.options.highlights.diff }
   )
-  M.hints = vim.tbl_deep_extend("force", {}, M.options.hints)
 
   if next(M.options.vendors) ~= nil then
     for k, v in pairs(M.options.vendors) do
       M.options.vendors[k] = type(v) == "function" and v() or v
     end
+    vim.validate({ vendors = { M.options.vendors, "table", true } })
   end
 end
 
 ---@param opts? avante.Config
 function M.override(opts)
-  opts = opts or {}
-  M.options = vim.tbl_deep_extend("force", M.options, opts)
+  vim.validate({ opts = { opts, "table", true } })
+
+  M.options = vim.tbl_deep_extend("force", M.options, opts or {})
   if not M.options.silent_warning then
     -- set silent_warning to true if debug is false
     M.options.silent_warning = not M.options.debug
@@ -223,12 +227,12 @@ function M.override(opts)
     M.options.diff,
     { mappings = M.options.mappings.diff, highlights = M.options.highlights.diff }
   )
-  M.hints = vim.tbl_deep_extend("force", {}, M.options.hints)
 
   if next(M.options.vendors) ~= nil then
     for k, v in pairs(M.options.vendors) do
       M.options.vendors[k] = type(v) == "function" and v() or v
     end
+    vim.validate({ vendors = { M.options.vendors, "table", true } })
   end
 end
 
