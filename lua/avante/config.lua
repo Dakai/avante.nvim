@@ -7,10 +7,10 @@ local Utils = require("avante.utils")
 local M = {}
 
 ---@class avante.Config
----@field silent_warning boolean will be determined from debug
+---@field silent_warning? boolean will be determined from debug
 M.defaults = {
   debug = false,
-  ---@alias Provider "claude" | "openai" | "azure" | "gemini" | "cohere" | "copilot" | string
+  ---@alias Provider "claude" | "openai" | "azure" | "gemini" | "cohere" | "copilot" | [string]
   provider = "claude", -- Only recommend using Claude
   ---@alias Tokenizer "tiktoken" | "hf"
   -- Used for counting tokens and encoding text.
@@ -18,6 +18,13 @@ M.defaults = {
   -- For most providers that we support we will determine this automatically.
   -- If you wish to use a given implementation, then you can override it here.
   tokenizer = "tiktoken",
+  ---@alias AvanteSystemPrompt string
+  -- Default system prompt. Users can override this with their own prompt
+  -- You can use `require('avante.config').override({system_prompt = "MY_SYSTEM_PROMPT"}) conditionally
+  -- in your own autocmds to do it per directory, or that fit your needs.
+  system_prompt = [[
+You are an excellent programming expert.
+]],
   ---@type AvanteSupportedProvider
   openai = {
     endpoint = "https://bardapi.answer42.xyz/v1",
@@ -86,6 +93,7 @@ M.defaults = {
   ---3. auto_set_highlight_group        : Whether to automatically set the highlight group for the current line. Default to true.
   ---4. support_paste_from_clipboard    : Whether to support pasting image from clipboard. This will be determined automatically based whether img-clip is available or not.
   behaviour = {
+    auto_suggestions = false, -- Experimental stage
     auto_set_highlight_group = true,
     auto_set_keymaps = true,
     auto_apply_diff_after_generation = false,
@@ -111,11 +119,16 @@ M.defaults = {
       ours = "co",
       theirs = "ct",
       all_theirs = "ca",
-      none = "c0",
       both = "cb",
       cursor = "cc",
       next = "]x",
       prev = "[x",
+    },
+    suggestion = {
+      accept = "<M-l>",
+      next = "<M-]>",
+      prev = "<M-[>",
+      dismiss = "<C-]>",
     },
     jump = {
       next = "]]",
@@ -130,6 +143,7 @@ M.defaults = {
     edit = "<leader>ae",
     refresh = "<leader>ar",
     toggle = {
+      default = "<leader>at",
       debug = "<leader>ad",
       hint = "<leader>ah",
     },
@@ -154,11 +168,9 @@ M.defaults = {
       border = "rounded",
     },
   },
-  --- @class AvanteConflictUserConfig
+  --- @class AvanteConflictConfig
   diff = {
     autojump = true,
-    ---@type string | fun(): any
-    list_opener = "copen",
   },
   --- @class AvanteHintsConfig
   hints = {
@@ -169,10 +181,13 @@ M.defaults = {
 ---@type avante.Config
 M.options = {}
 
----@class avante.ConflictConfig: AvanteConflictUserConfig
+---@class avante.ConflictConfig: AvanteConflictConfig
 ---@field mappings AvanteConflictMappings
 ---@field highlights AvanteConflictHighlights
 M.diff = {}
+
+---@type Provider[]
+M.providers = {}
 
 ---@param opts? avante.Config
 function M.setup(opts)
@@ -193,6 +208,14 @@ function M.setup(opts)
     -- set silent_warning to true if debug is false
     M.options.silent_warning = not M.options.debug
   end
+  M.providers = vim
+    .iter(M.defaults)
+    :filter(function(_, value) return type(value) == "table" and value.endpoint ~= nil end)
+    :fold({}, function(acc, k)
+      acc = vim.list_extend({}, acc)
+      acc = vim.list_extend(acc, { k })
+      return acc
+    end)
 
   vim.validate({ provider = { M.options.provider, "string", false } })
 
@@ -208,6 +231,7 @@ function M.setup(opts)
       M.options.vendors[k] = type(v) == "function" and v() or v
     end
     vim.validate({ vendors = { M.options.vendors, "table", true } })
+    M.providers = vim.list_extend(M.providers, vim.tbl_keys(M.options.vendors))
   end
 end
 
@@ -231,6 +255,7 @@ function M.override(opts)
   if next(M.options.vendors) ~= nil then
     for k, v in pairs(M.options.vendors) do
       M.options.vendors[k] = type(v) == "function" and v() or v
+      if not vim.tbl_contains(M.providers, k) then M.providers = vim.list_extend(M.providers, { k }) end
     end
     vim.validate({ vendors = { M.options.vendors, "table", true } })
   end
@@ -238,31 +263,23 @@ end
 
 M = setmetatable(M, {
   __index = function(_, k)
-    if M.options[k] then
-      return M.options[k]
-    end
+    if M.options[k] then return M.options[k] end
   end,
 })
 
 ---@param skip_warning? boolean
 M.support_paste_image = function(skip_warning)
   skip_warning = skip_warning or M.silent_warning
-  if skip_warning then
-    return
-  end
+  if skip_warning then return end
 
   return Utils.has("img-clip.nvim") or Utils.has("img-clip")
 end
 
-M.get_window_width = function()
-  return math.ceil(vim.o.columns * (M.windows.width / 100))
-end
+M.get_window_width = function() return math.ceil(vim.o.columns * (M.windows.width / 100)) end
 
 ---@param provider Provider
 ---@return boolean
-M.has_provider = function(provider)
-  return M.options[provider] ~= nil or M.vendors[provider] ~= nil
-end
+M.has_provider = function(provider) return M.options[provider] ~= nil or M.vendors[provider] ~= nil end
 
 ---get supported providers
 ---@param provider Provider
@@ -290,6 +307,7 @@ M.BASE_PROVIDER_KEYS = {
   "local",
   "_shellenv",
   "tokenizer_id",
+  "use_xml_format",
 }
 
 ---@return {width: integer, height: integer}

@@ -30,13 +30,9 @@ M.api_key_name = "GOOGLEAI_API_KEY"
 M.tokenizer_id = "gpt-4o"
 
 ---@param opts AvantePromptOptions
-M.get_user_message = function(opts)
-  return table.concat(opts.user_prompts, "\n\n")
-end
+M.get_user_message = function(opts) return opts.user_prompt end
 
 M.parse_message = function(opts)
-  local user_prompt = table.concat(opts.user_prompts, "\n\n")
-
   ---@type string | OpenAIMessage[]
   local user_content
   if Config.behaviour.support_paste_from_clipboard and opts.image_paths and #opts.image_paths > 0 then
@@ -49,9 +45,9 @@ M.parse_message = function(opts)
         },
       })
     end
-    table.insert(user_content, { type = "text", text = user_prompt })
+    table.insert(user_content, { type = "text", text = opts.user_prompt })
   else
-    user_content = user_prompt
+    user_content = opts.user_prompt
   end
 
   return {
@@ -73,9 +69,7 @@ M.parse_response = function(data_stream, _, opts)
       if choice.finish_reason == "stop" then
         opts.on_complete(nil)
       elseif choice.delta.content then
-        if choice.delta.content ~= vim.NIL then
-          opts.on_chunk(choice.delta.content)
-        end
+        if choice.delta.content ~= vim.NIL then opts.on_chunk(choice.delta.content) end
       end
     end
   end
@@ -87,9 +81,7 @@ M.parse_curl_args = function(provider, code_opts)
   local headers = {
     ["Content-Type"] = "application/json",
   }
-  if not P.env.is_local("openai") then
-    headers["Authorization"] = "Bearer " .. provider.parse_api_key()
-  end
+  if not P.env.is_local("openai") then headers["Authorization"] = "Bearer " .. provider.parse_api_key() end
 
   return {
     url = Utils.trim(base.endpoint, { suffix = "/" }) .. "/chat/completions",

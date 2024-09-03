@@ -25,11 +25,7 @@ M.parse_message = function(opts)
   end
 
   -- insert a part into parts
-  for _, user_prompt in ipairs(opts.user_prompts) do
-    table.insert(message_content, {
-      text = user_prompt,
-    })
-  end
+  table.insert(message_content, { text = opts.user_prompt })
 
   return {
     systemInstruction = {
@@ -51,9 +47,7 @@ end
 
 M.parse_response = function(data_stream, _, opts)
   local ok, json = pcall(vim.json.decode, data_stream)
-  if not ok then
-    opts.on_complete(json)
-  end
+  if not ok then opts.on_complete(json) end
   if json.candidates then
     if #json.candidates > 0 then
       opts.on_chunk(json.candidates[1].content.parts[1].text)

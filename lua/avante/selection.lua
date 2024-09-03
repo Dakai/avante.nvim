@@ -50,12 +50,8 @@ function Selection:get_virt_text_line()
 
   -- Ensure line numbers are not negative and don't exceed buffer range
   local total_lines = api.nvim_buf_line_count(0)
-  if current_line < 0 then
-    current_line = 0
-  end
-  if current_line >= total_lines then
-    current_line = total_lines - 1
-  end
+  if current_line < 0 then current_line = 0 end
+  if current_line >= total_lines then current_line = total_lines - 1 end
 
   -- Take the first line of the selection to ensure virt_text is always in the top right corner
   return current_line
@@ -84,10 +80,8 @@ end
 
 function Selection:close_editing_input()
   self:close_editing_input_shortcuts_hints()
-  api.nvim_exec_autocmds("User", { pattern = Llm.CANCEL_PATTERN })
-  if api.nvim_get_mode().mode == "i" then
-    vim.cmd([[stopinsert]])
-  end
+  Llm.cancel_inflight_request()
+  if api.nvim_get_mode().mode == "i" then vim.cmd([[stopinsert]]) end
   if self.editing_input_winid and api.nvim_win_is_valid(self.editing_input_winid) then
     api.nvim_win_close(self.editing_input_winid, true)
     self.editing_input_winid = nil
@@ -126,9 +120,7 @@ end
 function Selection:show_editing_input_shortcuts_hints()
   self:close_editing_input_shortcuts_hints()
 
-  if not self.editing_input_winid or not api.nvim_win_is_valid(self.editing_input_winid) then
-    return
-  end
+  if not self.editing_input_winid or not api.nvim_win_is_valid(self.editing_input_winid) then return end
 
   local win_width = api.nvim_win_get_width(self.editing_input_winid)
   local buf_height = api.nvim_buf_line_count(self.editing_input_bufnr)
@@ -236,23 +228,13 @@ function Selection:show_editing_input_shortcuts_hints()
     pattern = EDITING_INPUT_START_SPINNER_PATTERN,
     callback = function()
       timer = vim.uv.new_timer()
-      if timer then
-        timer:start(
-          0,
-          100,
-          vim.schedule_wrap(function()
-            update_spinner()
-          end)
-        )
-      end
+      if timer then timer:start(0, 100, vim.schedule_wrap(function() update_spinner() end)) end
     end,
   })
 
   api.nvim_create_autocmd("User", {
     pattern = EDITING_INPUT_STOP_SPINNER_PATTERN,
-    callback = function()
-      stop_spinner()
-    end,
+    callback = function() stop_spinner() end,
   })
 
   local width = fn.strdisplaywidth(hint_text)
@@ -340,9 +322,7 @@ function Selection:create_editing_input()
   api.nvim_create_autocmd({ "TextChanged", "TextChangedI" }, {
     group = self.augroup,
     buffer = bufnr,
-    callback = function()
-      self:show_editing_input_shortcuts_hints()
-    end,
+    callback = function() self:show_editing_input_shortcuts_hints() end,
   })
 
   api.nvim_create_autocmd("ModeChanged", {
@@ -350,9 +330,7 @@ function Selection:create_editing_input()
     pattern = "i:*",
     callback = function()
       local cur_buf = api.nvim_get_current_buf()
-      if cur_buf == bufnr then
-        self:show_editing_input_shortcuts_hints()
-      end
+      if cur_buf == bufnr then self:show_editing_input_shortcuts_hints() end
     end,
   })
 
@@ -361,16 +339,12 @@ function Selection:create_editing_input()
     pattern = "*:i",
     callback = function()
       local cur_buf = api.nvim_get_current_buf()
-      if cur_buf == bufnr then
-        self:show_editing_input_shortcuts_hints()
-      end
+      if cur_buf == bufnr then self:show_editing_input_shortcuts_hints() end
     end,
   })
 
-  local function submit_input()
-    local lines = api.nvim_buf_get_lines(bufnr, 0, -1, false)
-    local input = lines[1] or ""
-
+  ---@param input string
+  local function submit_input(input)
     local full_response = ""
     local start_line = self.selection.range.start.line
     local finish_line = self.selection.range.finish.line
@@ -408,14 +382,13 @@ function Selection:create_editing_input()
         return
       end
       api.nvim_exec_autocmds("User", { pattern = EDITING_INPUT_STOP_SPINNER_PATTERN })
-      vim.defer_fn(function()
-        self:close_editing_input()
-      end, 0)
+      vim.defer_fn(function() self:close_editing_input() end, 0)
     end
 
     local filetype = api.nvim_get_option_value("filetype", { buf = code_bufnr })
 
     Llm.stream({
+      bufnr = code_bufnr,
       file_content = code_content,
       code_lang = filetype,
       selected_code = self.selection.content,
@@ -426,14 +399,26 @@ function Selection:create_editing_input()
     })
   end
 
-  vim.keymap.set("i", Config.mappings.submit.insert, submit_input, { buffer = bufnr, noremap = true, silent = true })
-  vim.keymap.set("n", Config.mappings.submit.normal, submit_input, { buffer = bufnr, noremap = true, silent = true })
-  vim.keymap.set("n", "<Esc>", function()
-    self:close_editing_input()
-  end, { buffer = bufnr })
-  vim.keymap.set("n", "q", function()
-    self:close_editing_input()
-  end, { buffer = bufnr })
+  ---@return string
+  local get_bufnr_input = function()
+    local lines = api.nvim_buf_get_lines(bufnr, 0, -1, false)
+    return lines[1] or ""
+  end
+
+  vim.keymap.set(
+    "i",
+    Config.mappings.submit.insert,
+    function() submit_input(get_bufnr_input()) end,
+    { buffer = bufnr, noremap = true, silent = true }
+  )
+  vim.keymap.set(
+    "n",
+    Config.mappings.submit.normal,
+    function() submit_input(get_bufnr_input()) end,
+    { buffer = bufnr, noremap = true, silent = true }
+  )
+  vim.keymap.set("n", "<Esc>", function() self:close_editing_input() end, { buffer = bufnr })
+  vim.keymap.set("n", "q", function() self:close_editing_input() end, { buffer = bufnr })
 
   local quit_id, close_unfocus
   quit_id = api.nvim_create_autocmd("QuitPre", {
@@ -461,6 +446,13 @@ function Selection:create_editing_input()
       end
     end,
   })
+
+  api.nvim_create_autocmd("User", {
+    pattern = "AvanteEditSubmitted",
+    callback = function(ev)
+      if ev.data and ev.data.request then submit_input(ev.data.request) end
+    end,
+  })
 end
 
 function Selection:setup_autocmds()
@@ -469,9 +461,7 @@ function Selection:setup_autocmds()
     group = self.augroup,
     pattern = { "n:v", "n:V", "n:" }, -- Entering Visual mode from Normal mode
     callback = function(ev)
-      if not Utils.is_sidebar_buffer(ev.buf) then
-        self:show_shortcuts_hints_popup()
-      end
+      if not Utils.is_sidebar_buffer(ev.buf) then self:show_shortcuts_hints_popup() end
     end,
   })
 
@@ -492,18 +482,14 @@ function Selection:setup_autocmds()
     group = self.augroup,
     pattern = { "v:n", "v:i", "v:c" }, -- Switching from visual mode back to normal, insert, or other modes
     callback = function(ev)
-      if not Utils.is_sidebar_buffer(ev.buf) then
-        self:close_shortcuts_hints_popup()
-      end
+      if not Utils.is_sidebar_buffer(ev.buf) then self:close_shortcuts_hints_popup() end
     end,
   })
 
   api.nvim_create_autocmd({ "BufLeave" }, {
     group = self.augroup,
     callback = function(ev)
-      if not Utils.is_sidebar_buffer(ev.buf) then
-        self:close_shortcuts_hints_popup()
-      end
+      if not Utils.is_sidebar_buffer(ev.buf) then self:close_shortcuts_hints_popup() end
     end,
   })
 
@@ -511,9 +497,7 @@ function Selection:setup_autocmds()
 end
 
 function Selection:delete_autocmds()
-  if self.augroup then
-    api.nvim_del_augroup_by_id(self.augroup)
-  end
+  if self.augroup then api.nvim_del_augroup_by_id(self.augroup) end
   self.augroup = nil
   Selection.did_setup = false
 end

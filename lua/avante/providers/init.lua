@@ -10,7 +10,7 @@ local Dressing = require("avante.ui.dressing")
 ---
 ---@class AvantePromptOptions: table<[string], string>
 ---@field system_prompt string
----@field user_prompts string[]
+---@field user_prompt string
 ---@field image_paths? string[]
 ---
 ---@class AvanteBaseMessage
@@ -70,6 +70,7 @@ local Dressing = require("avante.ui.dressing")
 ---@field has fun(): boolean
 ---@field api_key_name string
 ---@field tokenizer_id string | "gpt-4o"
+---@field use_xml_format boolean
 ---@field model? string
 ---@field parse_api_key fun(): string | nil
 ---@field parse_stream_data? AvanteStreamParser
@@ -97,13 +98,9 @@ E.cache = {}
 ---@return string | nil
 E.parse_envvar = function(Opts)
   local api_key_name = Opts.api_key_name
-  if api_key_name == nil then
-    error("Requires api_key_name")
-  end
+  if api_key_name == nil then error("Requires api_key_name") end
 
-  if E.cache[api_key_name] ~= nil then
-    return E.cache[api_key_name]
-  end
+  if E.cache[api_key_name] ~= nil then return E.cache[api_key_name] end
 
   local cmd = api_key_name:match("^cmd:(.*)")
 
@@ -176,9 +173,7 @@ E.setup = function(opts)
   opts.provider.setup()
 
   -- check if var is a all caps string
-  if var == M.AVANTE_INTERNAL_KEY or var:match("^cmd:(.*)") then
-    return
-  end
+  if var == M.AVANTE_INTERNAL_KEY or var:match("^cmd:(.*)") then return end
 
   local refresh = opts.refresh or false
 
@@ -259,33 +254,23 @@ M = setmetatable(M, {
       t[k] = Opts
     else
       local ok, module = pcall(require, "avante.providers." .. k)
-      if not ok then
-        error("Failed to load provider: " .. k)
-      end
+      if not ok then error("Failed to load provider: " .. k) end
       Opts._shellenv = module.api_key_name ~= M.AVANTE_INTERNAL_KEY and module.api_key_name or nil
       t[k] = vim.tbl_deep_extend("keep", Opts, module)
     end
 
-    t[k].parse_api_key = function()
-      return E.parse_envvar(t[k])
-    end
+    t[k].parse_api_key = function() return E.parse_envvar(t[k]) end
 
     -- default to gpt-4o as tokenizer
-    if t[k].tokenizer_id == nil then
-      t[k].tokenizer_id = "gpt-4o"
-    end
+    if t[k].tokenizer_id == nil then t[k].tokenizer_id = "gpt-4o" end
 
-    if t[k].has == nil then
-      t[k].has = function()
-        return E.parse_envvar(t[k]) ~= nil
-      end
-    end
+    if t[k].use_xml_format == nil then t[k].use_xml_format = false end
+
+    if t[k].has == nil then t[k].has = function() return E.parse_envvar(t[k]) ~= nil end end
 
     if t[k].setup == nil then
       t[k].setup = function()
-        if not E.is_local(k) then
-          t[k].parse_api_key()
-        end
+        if not E.is_local(k) then t[k].parse_api_key() end
         require("avante.tokenizers").setup(t[k].tokenizer_id)
       end
     end
@@ -300,11 +285,8 @@ M.setup = function()
   ---@type AvanteProviderFunctor
   local provider = M[Config.provider]
   E.setup({ provider = provider })
-
-  M.commands()
 end
 
----@private
 ---@param provider Provider
 function M.refresh(provider)
   require("avante.config").override({ provider = provider })
@@ -313,31 +295,6 @@ function M.refresh(provider)
   local p = M[Config.provider]
   E.setup({ provider = p, refresh = true })
   Utils.info("Switch to provider: " .. provider, { once = true, title = "Avante" })
-end
-
-local default_providers = { "openai", "claude", "azure", "gemini" }
-
----@private
-M.commands = function()
-  api.nvim_create_user_command("AvanteSwitchProvider", function(args)
-    local cmd = vim.trim(args.args or "")
-    M.refresh(cmd)
-  end, {
-    nargs = 1,
-    desc = "avante: switch provider",
-    complete = function(_, line)
-      if line:match("^%s*AvanteSwitchProvider %w") then
-        return {}
-      end
-      local prefix = line:match("^%s*AvanteSwitchProvider (%w*)") or ""
-      -- join two tables
-      local Keys = vim.list_extend({}, default_providers)
-      Keys = vim.list_extend(Keys, vim.tbl_keys(Config.vendors or {}))
-      return vim.tbl_filter(function(key)
-        return key:find(prefix) == 1
-      end, Keys)
-    end,
-  })
 end
 
 ---@param opts AvanteProvider | AvanteSupportedProvider | AvanteProviderFunctor
@@ -357,15 +314,10 @@ M.parse_config = function(opts)
   end
 
   return s1,
-    vim
-      .iter(s2)
-      :filter(function(_, v)
-        return type(v) ~= "function"
-      end)
-      :fold({}, function(acc, k, v)
-        acc[k] = v
-        return acc
-      end)
+    vim.iter(s2):filter(function(_, v) return type(v) ~= "function" end):fold({}, function(acc, k, v)
+      acc[k] = v
+      return acc
+    end)
 end
 
 ---@private

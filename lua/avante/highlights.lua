@@ -11,6 +11,8 @@ local Highlights = {
   REVERSED_SUBTITLE = { name = "AvanteReversedSubtitle", fg = "#56b6c2" },
   THIRD_TITLE = { name = "AvanteThirdTitle", fg = "#ABB2BF", bg = "#353B45" },
   REVERSED_THIRD_TITLE = { name = "AvanteReversedThirdTitle", fg = "#353B45" },
+  SUGGESTION = { name = "AvanteSuggestion", link = "Comment" },
+  ANNOTATION = { name = "AvanteAnnotation", link = "Comment" },
 }
 
 Highlights.conflict = {
@@ -48,16 +50,15 @@ M.setup = function()
       end)
       :each(function(_, hl)
         if not has_set_colors(hl.name) then
-          api.nvim_set_hl(0, hl.name, { fg = hl.fg or nil, bg = hl.bg or nil })
+          api.nvim_set_hl(0, hl.name, { fg = hl.fg or nil, bg = hl.bg or nil, link = hl.link or nil })
         end
       end)
-
-    M.conflict_highlights()
   end
 
   api.nvim_set_hl(M.hint_ns, "NormalFloat", { fg = normal_float.fg, bg = normal_float.bg })
   api.nvim_set_hl(M.input_ns, "NormalFloat", { fg = normal_float.fg, bg = normal_float.bg })
   api.nvim_set_hl(M.input_ns, "FloatBorder", { fg = normal.fg, bg = normal.bg })
+  M.conflict_highlights()
 end
 
 ---@param opts? AvanteConflictHighlights
@@ -121,9 +122,7 @@ end
 
 ---@param attr integer
 ---@param percent integer
-H.alter = function(attr, percent)
-  return math.floor(attr * (100 + percent) / 100)
-end
+H.alter = function(attr, percent) return math.floor(attr * (100 + percent) / 100) end
 
 ---@source https://stackoverflow.com/q/5560248
 ---@see https://stackoverflow.com/a/37797380
@@ -133,9 +132,7 @@ end
 ---@return string
 H.shade_color = function(color, percent)
   local rgb = H.decode_24bit_rgb(color)
-  if not rgb.r or not rgb.g or not rgb.b then
-    return "NONE"
-  end
+  if not rgb.r or not rgb.g or not rgb.b then return "NONE" end
   local r, g, b = H.alter(rgb.r, percent), H.alter(rgb.g, percent), H.alter(rgb.b, percent)
   r, g, b = math.min(r, 255), math.min(g, 255), math.min(b, 255)
   return string.format("#%02x%02x%02x", r, g, b)

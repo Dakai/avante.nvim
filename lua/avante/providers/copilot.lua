@@ -56,14 +56,10 @@ H.get_oauth_token = function()
   ---@type Path[]
   local paths = vim.iter({ "hosts.json", "apps.json" }):fold({}, function(acc, path)
     local yason = Path:new(config_dir):joinpath("github-copilot", path)
-    if yason:exists() then
-      table.insert(acc, yason)
-    end
+    if yason:exists() then table.insert(acc, yason) end
     return acc
   end)
-  if #paths == 0 then
-    error("You must setup copilot with either copilot.lua or copilot.vim", 2)
-  end
+  if #paths == 0 then error("You must setup copilot with either copilot.lua or copilot.vim", 2) end
 
   local yason = paths[1]
   return vim
@@ -71,9 +67,7 @@ H.get_oauth_token = function()
       ---@type table<string, OAuthToken>
       vim.json.decode(yason:read())
     )
-    :filter(function(k, _)
-      return k:match("github.com")
-    end)
+    :filter(function(k, _) return k:match("github.com") end)
     ---@param acc {oauth_token: string}
     :fold({}, function(acc, _, v)
       acc.oauth_token = v.oauth_token
@@ -83,17 +77,13 @@ H.get_oauth_token = function()
 end
 
 H.chat_auth_url = "https://api.github.com/copilot_internal/v2/token"
-H.chat_completion_url = function(base_url)
-  return Utils.trim(base_url, { prefix = "/" }) .. "/chat/completions"
-end
+H.chat_completion_url = function(base_url) return Utils.trim(base_url, { prefix = "/" }) .. "/chat/completions" end
 
 ---@class AvanteProviderFunctor
 local M = {}
 
 H.refresh_token = function()
-  if not M.state then
-    error("internal initialization error")
-  end
+  if not M.state then error("internal initialization error") end
 
   if
     not M.state.github_token
@@ -107,14 +97,10 @@ H.refresh_token = function()
       timeout = Config.copilot.timeout,
       proxy = Config.copilot.proxy,
       insecure = Config.copilot.allow_insecure,
-      on_error = function(err)
-        error("Failed to get response: " .. vim.inspect(err))
-      end,
+      on_error = function(err) error("Failed to get response: " .. vim.inspect(err)) end,
       callback = function(output)
         M.state.github_token = vim.json.decode(output.body)
-        if not vim.g.avante_login then
-          vim.g.avante_login = true
-        end
+        if not vim.g.avante_login then vim.g.avante_login = true end
       end,
     })
   end
@@ -132,7 +118,7 @@ M.tokenizer_id = "gpt-4o"
 M.parse_message = function(opts)
   return {
     { role = "system", content = opts.system_prompt },
-    { role = "user", content = table.concat(opts.user_prompts, "\n\n") },
+    { role = "user", content = opts.user_prompt },
   }
 end
 
