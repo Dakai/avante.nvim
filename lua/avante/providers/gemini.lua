@@ -6,7 +6,7 @@ local Clipboard = require("avante.clipboard")
 local M = {}
 
 M.api_key_name = "GEMINI_API_KEY"
-M.tokenizer_id = "google/gemma-2b"
+-- M.tokenizer_id = "google/gemma-2b"
 
 M.parse_message = function(opts)
   local message_content = {}
@@ -25,7 +25,7 @@ M.parse_message = function(opts)
   end
 
   -- insert a part into parts
-  table.insert(message_content, { text = opts.user_prompt })
+  table.insert(message_content, { text = table.concat(opts.user_prompts, "\n") })
 
   return {
     systemInstruction = {

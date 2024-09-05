@@ -2,6 +2,7 @@ local Utils = require("avante.utils")
 local Config = require("avante.config")
 local Llm = require("avante.llm")
 local Highlights = require("avante.highlights")
+local Provider = require("avante.providers")
 
 local api = vim.api
 local fn = vim.fn
@@ -260,6 +261,11 @@ end
 function Selection:create_editing_input()
   self:close_editing_input()
 
+  if not vim.g.avante_login or vim.g.avante_login == false then
+    api.nvim_exec_autocmds("User", { pattern = Provider.env.REQUEST_LOGIN_PATTERN })
+    vim.g.avante_login = true
+  end
+
   local code_bufnr = api.nvim_get_current_buf()
   local code_wind = api.nvim_get_current_win()
   self.cursor_pos = api.nvim_win_get_cursor(code_wind)
@@ -389,6 +395,7 @@ function Selection:create_editing_input()
 
     Llm.stream({
       bufnr = code_bufnr,
+      ask = true,
       file_content = code_content,
       code_lang = filetype,
       selected_code = self.selection.content,

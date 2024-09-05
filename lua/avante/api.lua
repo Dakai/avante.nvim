@@ -5,16 +5,9 @@ local Utils = require("avante.utils")
 ---@operator call(): boolean
 ---@field debug ToggleBind.wrap
 ---@field hint ToggleBind.wrap
----
----@class avante.Api
----@field ask fun(question:string?): boolean
----@field edit fun(question:string?): nil
----@field refresh fun(): nil
----@field build fun(opts: {source: boolean}): boolean
----@field switch_provider fun(target: string): nil
----@field toggle avante.ApiToggle
----@field get_suggestion fun(): avante.Suggestion | nil
 
+---@class avante.Api
+---@field toggle avante.ApiToggle
 local M = {}
 
 ---@param target Provider
@@ -31,8 +24,9 @@ local function to_windows_path(path)
   return winpath
 end
 
----@param opts {source: boolean}
+---@param opts? {source: boolean}
 M.build = function(opts)
+  opts = opts or { source = true }
   local dirname = Utils.trim(string.sub(debug.getinfo(1).source, 2, #"/init.lua" * -1), { suffix = "/" })
   local git_root = vim.fs.find(".git", { path = dirname, upward = true })[1]
   local build_directory = git_root and vim.fn.fnamemodify(git_root, ":h") or (dirname .. "/../../")
@@ -61,21 +55,51 @@ M.build = function(opts)
       string.format("%s\\Build.ps1", build_directory),
       "-WorkingDirectory",
       build_directory,
+      "-BuildFromSource",
+      string.format("%s", opts.source == true and "true" or "false"),
     }
   else
     error("Unsupported operating system: " .. os_name, 2)
   end
 
-  local job = vim.system(cmd, { text = true }):wait()
+  ---@type integer
+  local pid
+  local exit_code = { 0 }
 
-  return vim.tbl_contains({ 0 }, job.code) and true or false
+  local ok, job_or_err = pcall(vim.system, cmd, { text = true }, function(obj)
+    local stderr = obj.stderr and vim.split(obj.stderr, "\n") or {}
+    local stdout = obj.stdout and vim.split(obj.stdout, "\n") or {}
+    if vim.tbl_contains(exit_code, obj.code) then
+      local output = stdout
+      if #output == 0 then
+        table.insert(output, "")
+        Utils.debug(output)
+      else
+        Utils.debug(stderr)
+      end
+    end
+  end)
+  if not ok then Utils.error("Failed to build the command: " .. cmd .. "\n" .. job_or_err, { once = true }) end
+  pid = job_or_err.pid
+  return pid
 end
 
----@param question? string
-M.ask = function(question)
-  if not require("avante").toggle() then return false end
-  if question == nil or question == "" then return true end
-  vim.api.nvim_exec_autocmds("User", { pattern = "AvanteInputSubmitted", data = { request = question } })
+---@class AskOptions
+---@field question? string optional questions
+---@field win? table<string, any> windows options similar to |nvim_open_win()|
+---@field ask? boolean
+
+---@param opts? AskOptions
+M.ask = function(opts)
+  opts = opts or {}
+  if type(opts) == "string" then
+    Utils.warn("passing 'ask' as string is deprecated, do {question = '...'} instead", { once = true })
+    opts = { question = opts }
+  end
+
+  if not require("avante").toggle_sidebar(opts) then return false end
+  if opts.question == nil or opts.question == "" then return true end
+  vim.api.nvim_exec_autocmds("User", { pattern = "AvanteInputSubmitted", data = { request = opts.question } })
   return true
 end
 
@@ -95,7 +119,8 @@ M.get_suggestion = function()
   return suggestion
 end
 
-M.refresh = function()
+---@param opts? AskOptions
+M.refresh = function(opts)
   local sidebar = require("avante").get()
   if not sidebar then return end
   if not sidebar:is_open() then return end
@@ -112,7 +137,7 @@ M.refresh = function()
   sidebar:close()
   sidebar.code.winid = curwin
   sidebar.code.bufnr = curbuf
-  sidebar:render()
+  sidebar:render(opts)
 end
 
 return setmetatable(M, {

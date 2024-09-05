@@ -32,11 +32,44 @@ H.commands = function()
     api.nvim_create_user_command("Avante" .. n, c, o)
   end
 
-  cmd(
-    "Ask",
-    function(opts) require("avante.api").ask(vim.trim(opts.args)) end,
-    { desc = "avante: ask AI for code suggestions", nargs = "*" }
-  )
+  cmd("Ask", function(opts)
+    ---@type AskOptions
+    local args = { question = nil, win = {} }
+    local q_parts = {}
+    local q_ask = nil
+    for _, arg in ipairs(opts.fargs) do
+      local value = arg:match("position=(%w+)")
+      local ask = arg:match("ask=(%w+)")
+      if ask ~= nil then
+        q_ask = ask == "true"
+      elseif value then
+        args.win.position = value
+      else
+        table.insert(q_parts, arg)
+      end
+    end
+    require("avante.api").ask(
+      vim.tbl_deep_extend(
+        "force",
+        args,
+        { ask = q_ask, question = #q_parts > 0 and table.concat(q_parts, " ") or nil }
+      )
+    )
+  end, {
+    desc = "avante: ask AI for code suggestions",
+    nargs = "*",
+    complete = function(_, _, _)
+      local candidates = {} ---@type string[]
+      vim.list_extend(
+        candidates,
+        ---@param x string
+        vim.tbl_map(function(x) return "position=" .. x end, { "left", "right", "top", "bottom" })
+      )
+      vim.list_extend(candidates, vim.tbl_map(function(x) return "ask=" .. x end, { "true", "false" }))
+      return candidates
+    end,
+  })
+  cmd("Chat", function() require("avante.api").ask({ ask = false }) end, { desc = "avante: chat with the codebase" })
   cmd("Toggle", function() M.toggle() end, { desc = "avante: toggle AI panel" })
   cmd(
     "Edit",
@@ -50,7 +83,7 @@ H.commands = function()
       local key, value = arg:match("(%w+)=(%w+)")
       if key and value then args[key] = value == "true" end
     end
-    if args.source == nil then args.source = true end
+    if args.source == nil then args.source = false end
 
     require("avante.api").build(args)
   end, {
@@ -67,12 +100,14 @@ H.commands = function()
       return vim.tbl_filter(function(key) return key:find(prefix, 1, true) == 1 end, Config.providers)
     end,
   })
+  cmd("Clear", function() require("avante.path").clear() end, { desc = "avante: clear all chat history" })
 end
 
 H.keymaps = function()
   vim.keymap.set({ "n", "v" }, "<Plug>(AvanteAsk)", function() require("avante.api").ask() end, { noremap = true })
   vim.keymap.set("v", "<Plug>(AvanteEdit)", function() require("avante.api").edit() end, { noremap = true })
   vim.keymap.set("n", "<Plug>(AvanteRefresh)", function() require("avante.api").refresh() end, { noremap = true })
+  vim.keymap.set("n", "<Plug>(AvanteBuild)", function() require("avante.api").build() end, { noremap = true })
   vim.keymap.set("n", "<Plug>(AvanteToggle)", function() M.toggle() end, { noremap = true })
   vim.keymap.set("n", "<Plug>(AvanteToggleDebug)", function() M.toggle.debug() end)
   vim.keymap.set("n", "<Plug>(AvanteToggleHint)", function() M.toggle.hint() end)
@@ -256,6 +291,21 @@ end
 
 M.toggle = { api = true }
 
+---@param opts? AskOptions
+M.toggle_sidebar = function(opts)
+  opts = opts or {}
+  if opts.ask == nil then opts.ask = true end
+
+  local sidebar = M.get()
+  if not sidebar then
+    M._init(api.nvim_get_current_tabpage())
+    M.current.sidebar:open(opts)
+    return true
+  end
+
+  return sidebar:toggle(opts)
+end
+
 M.toggle.debug = H.api(Utils.toggle_wrap({
   name = "debug",
   get = function() return Config.debug end,
@@ -270,16 +320,7 @@ M.toggle.hint = H.api(Utils.toggle_wrap({
 
 setmetatable(M.toggle, {
   __index = M.toggle,
-  __call = function()
-    local sidebar = M.get()
-    if not sidebar then
-      M._init(api.nvim_get_current_tabpage())
-      M.current.sidebar:open()
-      return true
-    end
-
-    return sidebar:toggle()
-  end,
+  __call = function() M.toggle_sidebar() end,
 })
 
 ---@param opts? avante.Config

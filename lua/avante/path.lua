@@ -76,6 +76,7 @@ N.get = function(bufnr)
 
   -- get root directory of given bufnr
   local directory = Path:new(Utils.root.get({ buf = bufnr }))
+  if Utils.get_os_name() == "windows" then directory = Path:new(directory:absolute():gsub("^%a:", "")[1]) end
   ---@cast directory Path
   ---@type Path
   local cache_prompt_dir = P.cache_path:joinpath(directory)
@@ -110,9 +111,13 @@ N.get_file = function(mode)
   return string.format("%s.avanterules", mode)
 end
 
+---@param path string
+---@param opts TemplateOptions
+N.render_file = function(path, opts) return templates.render(path, opts) end
+
 ---@param mode LlmMode
 ---@param opts TemplateOptions
-N.render = function(mode, opts) return templates.render(N.get_file(mode), opts) end
+N.render_mode = function(mode, opts) return templates.render(N.get_file(mode), opts) end
 
 N.initialize = function(directory) templates.initialize(directory) end
 
@@ -138,6 +143,9 @@ end
 
 P.available = function() return templates ~= nil end
 
-P.clear = function() P.cache_path:rm({ recursive = true }) end
+P.clear = function()
+  P.cache_path:rm({ recursive = true })
+  P.history_path:rm({ recursive = true })
+end
 
 return P

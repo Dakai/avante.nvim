@@ -19,9 +19,7 @@ https://github.com/user-attachments/assets/86140bfd-08b4-483d-a887-1b701d9e37dd
 
 ## Installation
 
-For building binary if you wish to build from source, then `cargo` is required. Otherwise `curl` and `jq` will be used to get prebuilt binary from GitHub.
-
-For prebuilt binary, one must set the following `GITHUB_TOKEN` in given shell (instruction for creating PAT is [here](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)) (requires `action:scope`)
+For building binary if you wish to build from source, then `cargo` is required. Otherwise `curl` and `tar` will be used to get prebuilt binary from GitHub.
 
 <details open>
 
@@ -32,12 +30,13 @@ For prebuilt binary, one must set the following `GITHUB_TOKEN` in given shell (i
   "yetone/avante.nvim",
   event = "VeryLazy",
   lazy = false,
+  version = false, -- set this if you want to always pull the latest change
   opts = {
     -- add any opts here
   },
-  -- if you want to download pre-built binary, then pass source=false. Make sure to follow instruction above.
-  -- Also note that downloading prebuilt binary is a lot faster comparing to compiling from source.
-  build = ":AvanteBuild source=false",
+  -- if you want to build from source then do `make BUILD_FROM_SOURCE=true`
+  build = "make",
+  -- build = "powershell -ExecutionPolicy Bypass -File Build.ps1 -BuildFromSource false" -- for windows
   dependencies = {
     "stevearc/dressing.nvim",
     "nvim-lua/plenary.nvim",
@@ -63,7 +62,7 @@ For prebuilt binary, one must set the following `GITHUB_TOKEN` in given shell (i
       },
     },
     {
-      -- Make sure to setup it properly if you have lazy=true
+      -- Make sure to set this up properly if you have lazy=true
       'MeanderingProgrammer/render-markdown.nvim',
       opts = {
         file_types = { "markdown", "Avante" },
@@ -95,11 +94,6 @@ Plug 'zbirenbaum/copilot.lua'
 " Yay, pass source=true if you want to build from source
 Plug 'yetone/avante.nvim', { 'branch': 'main', 'do': { -> avante#build() }, 'on': 'AvanteAsk' }
 ```
-
-> [!important]
->
-> For `avante.tokenizers` and templates to work, make sure to call `require('avante_lib').load()` somewhere when entering the editor.
-> We will leave the users to decide where it fits to do this, as this varies among configurations. (But we do recommend running this after where you set your colorscheme)
 
 </details>
 
@@ -159,6 +153,12 @@ require('avante').setup ({
 ```
 
 </details>
+
+
+> [!IMPORTANT]
+>
+> For `avante.tokenizers` and templates to work, make sure to call `require('avante_lib').load()` somewhere when entering the editor.
+> We will leave the users to decide where it fits to do this, as this varies among configurations. (But we do recommend running this after where you set your colorscheme)
 
 
 > [!IMPORTANT]
