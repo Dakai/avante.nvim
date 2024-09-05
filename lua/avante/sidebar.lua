@@ -114,10 +114,10 @@ end
 
 function Sidebar:is_open()
   return self.result
-    and self.result.bufnr
-    and api.nvim_buf_is_valid(self.result.bufnr)
-    and self.result.winid
-    and api.nvim_win_is_valid(self.result.winid)
+      and self.result.bufnr
+      and api.nvim_buf_is_valid(self.result.bufnr)
+      and self.result.winid
+      and api.nvim_win_is_valid(self.result.winid)
 end
 
 function Sidebar:in_code_win() return self.code.winid == api.nvim_get_current_win() end
@@ -248,7 +248,7 @@ local function transform_result_content(original_content, result_content, code_l
         local match = true
         for k = 0, search_end - search_start - 1 do
           if
-            Utils.remove_indentation(original_lines[j + k]) ~= Utils.remove_indentation(result_lines[search_start + k])
+              Utils.remove_indentation(original_lines[j + k]) ~= Utils.remove_indentation(result_lines[search_start + k])
           then
             match = false
             break
@@ -388,8 +388,8 @@ local function ensure_snippets_no_overlap(original_content, snippets)
       local new_start_line = nil
       for i = snippet.range[1], math.min(snippet.range[2], last_end_line) do
         if
-          Utils.remove_indentation(original_lines[i])
-          == Utils.remove_indentation(snippet_lines[i - snippet.range[1] + 1])
+            Utils.remove_indentation(original_lines[i])
+            == Utils.remove_indentation(snippet_lines[i - snippet.range[1] + 1])
         then
           new_start_line = i + 1
         else
@@ -508,8 +508,8 @@ function Sidebar:apply(current_cursor)
       local cursor_line = Utils.get_cursor_pos(self.result.winid)
       for _, snippet in ipairs(all_snippets) do
         if
-          cursor_line >= snippet.start_line_in_response_buf + response_start_line - 1
-          and cursor_line <= snippet.end_line_in_response_buf + response_start_line - 1
+            cursor_line >= snippet.start_line_in_response_buf + response_start_line - 1
+            and cursor_line <= snippet.end_line_in_response_buf + response_start_line - 1
         then
           selected_snippets = { snippet }
           break
@@ -558,7 +558,7 @@ local base_win_options = {
   fillchars = "eob: ",
   winhighlight = "CursorLine:Normal,CursorColumn:Normal",
   winbar = "",
-  statusline = "",
+  statusline = "no",
 }
 
 function Sidebar:render_header(winid, bufnr, header_text, hl, reverse_hl)
@@ -617,7 +617,7 @@ function Sidebar:render_input(ask)
   local code_file_fullpath = api.nvim_buf_get_name(self.code.bufnr)
   local code_filename = fn.fnamemodify(code_file_fullpath, ":t")
   local header_text =
-    string.format("󱜸 %s %s %s (<Tab>: switch focus)", ask and "Ask" or "Chat with", icon, code_filename)
+      string.format("󱜸 %s %s %s (<Tab>: switch focus)", ask and "Ask" or "Chat with", icon, code_filename)
 
   if self.code.selection ~= nil then
     header_text = string.format(
@@ -653,11 +653,11 @@ function Sidebar:render_selected_code()
   end
 
   local header_text = " Selected Code"
-    .. (
-      selected_code_lines_count > selected_code_max_lines_count
+      .. (
+        selected_code_lines_count > selected_code_max_lines_count
         and " (Show only the first " .. tostring(selected_code_max_lines_count) .. " lines)"
-      or ""
-    )
+        or ""
+      )
 
   self:render_header(
     self.selected_code.winid,
@@ -682,12 +682,12 @@ function Sidebar:on_mount(opts)
     end
 
     current_apply_extmark_id =
-      api.nvim_buf_set_extmark(self.result.bufnr, CODEBLOCK_KEYBINDING_NAMESPACE, block.start_line, -1, {
-        virt_text = { { " [<a>: apply this, <A>: apply all] ", "Keyword" } },
-        virt_text_pos = "right_align",
-        hl_group = "Keyword",
-        priority = PRIORITY,
-      })
+        api.nvim_buf_set_extmark(self.result.bufnr, CODEBLOCK_KEYBINDING_NAMESPACE, block.start_line, -1, {
+          virt_text = { { " [<a>: apply this, <A>: apply all] ", "Keyword" } },
+          virt_text_pos = "right_align",
+          hl_group = "Keyword",
+          priority = PRIORITY,
+        })
   end
 
   local function bind_apply_key()
@@ -997,15 +997,15 @@ local function get_chat_record_prefix(timestamp, provider, model, request)
   provider = provider or "unknown"
   model = model or "unknown"
   return "- Datetime: "
-    .. timestamp
-    .. "\n\n"
-    .. "- Model: "
-    .. provider
-    .. "/"
-    .. model
-    .. "\n\n> "
-    .. request:gsub("\n", "\n> ")
-    .. "\n\n"
+      .. timestamp
+      .. "\n\n"
+      .. "- Model: "
+      .. provider
+      .. "/"
+      .. model
+      .. "\n\n> "
+      .. request:gsub("\n", "\n> ")
+      .. "\n\n"
 end
 
 function Sidebar:get_layout()
@@ -1016,7 +1016,7 @@ function Sidebar:update_content_with_history(history)
   local content = ""
   for idx, entry in ipairs(history) do
     local prefix =
-      get_chat_record_prefix(entry.timestamp, entry.provider, entry.model, entry.request or entry.requirement or "")
+        get_chat_record_prefix(entry.timestamp, entry.provider, entry.model, entry.request or entry.requirement or "")
     content = content .. prefix
     content = content .. entry.response .. "\n\n"
     if idx < #history then content = content .. "---\n\n" end
@@ -1076,7 +1076,7 @@ function Sidebar:get_commands()
 
   ---@type AvanteSlash[]
   local items = {
-    { description = "Show help message", command = "help" },
+    { description = "Show help message",  command = "help" },
     { description = "Clear chat history", command = "clear" },
     {
       shorthelp = "Ask a question about specific lines",
@@ -1107,19 +1107,19 @@ function Sidebar:get_commands()
   }
 
   return vim
-    .iter(items)
-    :map(
+      .iter(items)
+      :map(
       ---@param item AvanteSlash
-      function(item)
-        return {
-          command = item.command,
-          description = item.description,
-          callback = cbs[item.command],
-          details = item.shorthelp and table.concat({ item.shorthelp, item.description }, "\n") or item.description,
-        }
-      end
-    )
-    :totable()
+        function(item)
+          return {
+            command = item.command,
+            description = item.description,
+            callback = cbs[item.command],
+            details = item.shorthelp and table.concat({ item.shorthelp, item.description }, "\n") or item.description,
+          }
+        end
+      )
+      :totable()
 end
 
 function Sidebar:create_selected_code()
@@ -1183,7 +1183,7 @@ function Sidebar:create_input(opts)
     local selected_code_content_with_line_numbers = nil
     if self.code.selection ~= nil then
       selected_code_content_with_line_numbers =
-        Utils.prepend_line_number(self.code.selection.content, self.code.selection.range.start.line)
+          Utils.prepend_line_number(self.code.selection.content, self.code.selection.range.start.line)
     end
 
     if request:sub(1, 1) == "/" then
@@ -1291,9 +1291,11 @@ function Sidebar:create_input(opts)
   end
 
   local get_size = function()
-    if self:get_layout() == "vertical" then return {
-      height = 8,
-    } end
+    if self:get_layout() == "vertical" then
+      return {
+        height = 8,
+      }
+    end
 
     local selected_code_size = self:get_selected_code_size()
 
@@ -1393,7 +1395,7 @@ function Sidebar:create_input(opts)
     close_hint() -- Close the existing hint window
 
     local hint_text = (vim.fn.mode() ~= "i" and Config.mappings.submit.normal or Config.mappings.submit.insert)
-      .. ": submit"
+        .. ": submit"
 
     local buf = api.nvim_create_buf(false, true)
     api.nvim_buf_set_lines(buf, 0, -1, false, { hint_text })
