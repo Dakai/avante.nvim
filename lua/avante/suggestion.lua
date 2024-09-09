@@ -25,70 +25,30 @@ local SUGGESTION_NS = api.nvim_create_namespace("avante_suggestion")
 ---@field _timer? table
 ---@field _contexts table
 local Suggestion = {}
+Suggestion.__index = Suggestion
 
 ---@param id number
 ---@return avante.Suggestion
 function Suggestion:new(id)
-  local o = { id = id, suggestions = {} }
-  setmetatable(o, self)
-  self.__index = self
-  self.augroup = api.nvim_create_augroup("avante_suggestion_" .. id, { clear = true })
-  self.extmark_id = 1
-  self._timer = nil
-  self._contexts = {}
+  local instance = setmetatable({}, self)
+  instance.id = id
+  instance.extmark_id = 1
+  instance._timer = nil
+  instance._contexts = {}
   if Config.behaviour.auto_suggestions then
     if not vim.g.avante_login or vim.g.avante_login == false then
       api.nvim_exec_autocmds("User", { pattern = Provider.env.REQUEST_LOGIN_PATTERN })
       vim.g.avante_login = true
     end
-    self:setup_mappings()
-    self:setup_autocmds()
+    instance:setup_autocmds()
   end
-  return o
+  return instance
 end
 
 function Suggestion:destroy()
   self:stop_timer()
   self:reset()
   self:delete_autocmds()
-  api.nvim_del_namespace(SUGGESTION_NS)
-end
-
-function Suggestion:setup_mappings()
-  if not Config.behaviour.auto_set_keymaps then return end
-  if Config.mappings.suggestion and Config.mappings.suggestion.accept then
-    vim.keymap.set("i", Config.mappings.suggestion.accept, function() self:accept() end, {
-      desc = "[avante] accept suggestion",
-      noremap = true,
-      silent = true,
-    })
-  end
-
-  if Config.mappings.suggestion and Config.mappings.suggestion.dismiss then
-    vim.keymap.set("i", Config.mappings.suggestion.dismiss, function()
-      if self:is_visible() then self:dismiss() end
-    end, {
-      desc = "[avante] dismiss suggestion",
-      noremap = true,
-      silent = true,
-    })
-  end
-
-  if Config.mappings.suggestion and Config.mappings.suggestion.next then
-    vim.keymap.set("i", Config.mappings.suggestion.next, function() self:next() end, {
-      desc = "[avante] next suggestion",
-      noremap = true,
-      silent = true,
-    })
-  end
-
-  if Config.mappings.suggestion and Config.mappings.suggestion.prev then
-    vim.keymap.set("i", Config.mappings.suggestion.prev, function() self:prev() end, {
-      desc = "[avante] previous suggestion",
-      noremap = true,
-      silent = true,
-    })
-  end
 end
 
 function Suggestion:suggest()
@@ -307,6 +267,7 @@ function Suggestion:accept()
 end
 
 function Suggestion:setup_autocmds()
+  self.augroup = api.nvim_create_augroup("avante_suggestion_" .. self.id, { clear = true })
   local last_cursor_pos = {}
 
   local check_for_suggestion = Utils.debounce(function()
