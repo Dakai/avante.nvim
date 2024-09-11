@@ -7,7 +7,7 @@ local M = {}
 
 M.api_key_name = "GEMINI_API_KEY"
 
-vercel_secret_name = os.getenv("VERCEL_SECRET")
+local vercel_secret_name = os.getenv("VERCEL_SECRET")
 -- M.tokenizer_id = "google/gemma-2b"
 
 M.parse_message = function(opts)

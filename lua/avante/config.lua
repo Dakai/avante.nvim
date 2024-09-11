@@ -3,7 +3,7 @@
 
 local Utils = require("avante.utils")
 
-gemini_proxy = os.getenv("VERCEL_GEMINI_API_URL")
+local gemini_proxy = os.getenv("VERCEL_GEMINI_API_URL")
 
 ---@class avante.CoreConfig: avante.Config
 local M = {}
