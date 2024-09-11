@@ -171,7 +171,7 @@ function Selection:show_editing_input_shortcuts_hints()
   local timer = nil
 
   local hint_text = (vim.fn.mode() ~= "i" and Config.mappings.submit.normal or Config.mappings.submit.insert)
-    .. ": submit"
+      .. ": submit"
 
   local buf = api.nvim_create_buf(false, true)
   api.nvim_buf_set_lines(buf, 0, -1, false, { hint_text })
@@ -184,8 +184,8 @@ function Selection:show_editing_input_shortcuts_hints()
     api.nvim_buf_set_lines(buf, 0, -1, false, { new_text })
 
     if
-      not self.editing_input_shortcuts_hints_winid
-      or not api.nvim_win_is_valid(self.editing_input_shortcuts_hints_winid)
+        not self.editing_input_shortcuts_hints_winid
+        or not api.nvim_win_is_valid(self.editing_input_shortcuts_hints_winid)
     then
       return
     end
@@ -210,8 +210,8 @@ function Selection:show_editing_input_shortcuts_hints()
     api.nvim_buf_set_lines(buf, 0, -1, false, { hint_text })
 
     if
-      not self.editing_input_shortcuts_hints_winid
-      or not api.nvim_win_is_valid(self.editing_input_shortcuts_hints_winid)
+        not self.editing_input_shortcuts_hints_winid
+        or not api.nvim_win_is_valid(self.editing_input_shortcuts_hints_winid)
     then
       return
     end
@@ -424,7 +424,7 @@ function Selection:create_editing_input()
     function() submit_input(get_bufnr_input()) end,
     { buffer = bufnr, noremap = true, silent = true }
   )
-  vim.keymap.set("n", "<Esc>", function() self:close_editing_input() end, { buffer = bufnr })
+  --   vim.keymap.set("n", "<Esc>", function() self:close_editing_input() end, { buffer = bufnr })
   vim.keymap.set("n", "q", function() self:close_editing_input() end, { buffer = bufnr })
 
   local quit_id, close_unfocus
