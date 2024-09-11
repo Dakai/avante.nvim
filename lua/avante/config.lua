@@ -2,7 +2,8 @@
 ---we add a default var_accessor for this table to config values.
 
 local Utils = require("avante.utils")
-local gemini_proxy = os.getenv("VERCEL_GEMINI_API_URL")
+
+gemini_proxy = os.getenv("VERCEL_GEMINI_API_URL")
 
 ---@class avante.CoreConfig: avante.Config
 local M = {}
