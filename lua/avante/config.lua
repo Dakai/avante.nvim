@@ -26,7 +26,7 @@ You are an excellent programming expert.
 ]],
   ---@type AvanteSupportedProvider
   openai = {
-    endpoint = "https://bardapi.answer42.xyz/v1",
+    endpoint = "https://api.openai.com/v1",
     model = "gpt-4o",
     timeout = 30000, -- Timeout in milliseconds
     temperature = 0,
@@ -205,13 +205,13 @@ function M.setup(opts)
     }
   )
   M.providers = vim
-    .iter(M.defaults)
-    :filter(function(_, value) return type(value) == "table" and value.endpoint ~= nil end)
-    :fold({}, function(acc, k)
-      acc = vim.list_extend({}, acc)
-      acc = vim.list_extend(acc, { k })
-      return acc
-    end)
+      .iter(M.defaults)
+      :filter(function(_, value) return type(value) == "table" and value.endpoint ~= nil end)
+      :fold({}, function(acc, k)
+        acc = vim.list_extend({}, acc)
+        acc = vim.list_extend(acc, { k })
+        return acc
+      end)
 
   vim.validate({ provider = { M.options.provider, "string", false } })
 

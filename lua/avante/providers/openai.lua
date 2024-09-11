@@ -25,8 +25,8 @@ local P = require("avante.providers")
 ---@class AvanteProviderFunctor
 local M = {}
 
-M.api_key_name = "GOOGLEAI_API_KEY"
--- M.tokenizer_id = "gpt-4o"
+M.api_key_name = "OPENAI_API_KEY"
+M.tokenizer_id = "gpt-4o"
 
 ---@param opts AvantePromptOptions
 M.get_user_message = function(opts) return table.concat(opts.user_prompts, "\n") end
