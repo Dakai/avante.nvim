@@ -66,7 +66,7 @@ You are an excellent programming expert.
   },
   ---@type AvanteSupportedProvider
   gemini = {
-    endpoint = "hptts://" .. gemini_proxy .. "/api/v1beta/models",
+    endpoint = "https://" .. gemini_proxy .. "/api/v1beta/models",
     -- endpoint = "https://generativelanguage.googleapis.com/v1beta/models",
     -- model = "gemini-1.5-flash-latest",
     model = "gemini-1.5-flash-latest",
