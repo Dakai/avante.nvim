@@ -6,6 +6,8 @@ local Clipboard = require("avante.clipboard")
 local M = {}
 
 M.api_key_name = "GEMINI_API_KEY"
+
+vercel_secret_name = os.getenv("VERCEL_SECRET")
 -- M.tokenizer_id = "google/gemma-2b"
 
 M.parse_message = function(opts)
@@ -71,13 +73,13 @@ M.parse_curl_args = function(provider, code_opts)
 
   return {
     url = Utils.trim(base.endpoint, { suffix = "/" })
-      .. "/"
-      .. base.model
-      .. ":streamGenerateContent?alt=sse&key="
-      .. provider.parse_api_key(),
+        .. "/"
+        .. base.model
+        .. ":streamGenerateContent?alt=sse&key="
+        .. provider.parse_api_key(),
     proxy = base.proxy,
     insecure = base.allow_insecure,
-    headers = { ["Content-Type"] = "application/json" },
+    headers = { ["Content-Type"] = "application/json", ["x-vercel-protection-bypass"] = vercel_secret_name },
     body = vim.tbl_deep_extend("force", {}, M.parse_message(code_opts), body_opts),
   }
 end

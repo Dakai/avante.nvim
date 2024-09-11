@@ -2,6 +2,7 @@
 ---we add a default var_accessor for this table to config values.
 
 local Utils = require("avante.utils")
+local gemini_proxy = os.getenv("VERCEL_GEMINI_API_URL")
 
 ---@class avante.CoreConfig: avante.Config
 local M = {}
@@ -64,7 +65,9 @@ You are an excellent programming expert.
   },
   ---@type AvanteSupportedProvider
   gemini = {
-    endpoint = "https://generativelanguage.googleapis.com/v1beta/models",
+    endpoint = "hptts://" .. gemini_proxy .. "/api/v1beta/models",
+    -- endpoint = "https://generativelanguage.googleapis.com/v1beta/models",
+    -- model = "gemini-1.5-flash-latest",
     model = "gemini-1.5-flash-latest",
     timeout = 30000, -- Timeout in milliseconds
     temperature = 0,
