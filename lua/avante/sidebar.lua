@@ -1551,7 +1551,7 @@ function Sidebar:render(opts)
 
   self.result:map("n", "<Esc>", function()
     Llm.cancel_inflight_request()
-    self:close()
+    -- self:close()
   end)
 
   self:create_input(opts)
