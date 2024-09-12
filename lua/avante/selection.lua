@@ -424,7 +424,7 @@ function Selection:create_editing_input()
     function() submit_input(get_bufnr_input()) end,
     { buffer = bufnr, noremap = true, silent = true }
   )
-  --   vim.keymap.set("n", "<Esc>", function() self:close_editing_input() end, { buffer = bufnr })
+  vim.keymap.set("n", "<Esc>", function() self:close_editing_input() end, { buffer = bufnr })
   vim.keymap.set("n", "q", function() self:close_editing_input() end, { buffer = bufnr })
 
   local quit_id, close_unfocus
