@@ -25,7 +25,8 @@ local P = require("avante.providers")
 ---@class AvanteProviderFunctor
 local M = {}
 
-M.api_key_name = "OPENAI_API_KEY"
+-- M.api_key_name = "OPENAI_API_KEY"
+M.api_key_name = "GEMINI_API_KEY"
 
 ---@param opts AvantePromptOptions
 M.get_user_message = function(opts) return table.concat(opts.user_prompts, "\n") end
@@ -52,7 +53,7 @@ M.parse_message = function(opts)
 
   return {
     { role = "system", content = opts.system_prompt },
-    { role = "user", content = user_content },
+    { role = "user",   content = user_content },
   }
 end
 

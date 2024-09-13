@@ -2,6 +2,7 @@
 ---we add a default var_accessor for this table to config values.
 
 local Utils = require("avante.utils")
+local openai_proxy_url = os.getenv("GEMINI2OPENAI_PROXY_API_URL")
 
 ---@class avante.CoreConfig: avante.Config
 local M = {}
@@ -26,7 +27,7 @@ You are an excellent programming expert.
 ]],
   ---@type AvanteSupportedProvider
   openai = {
-    endpoint = "https://api.openai.com/v1",
+    endpoint = "https://" .. openai_proxy_url .. "/v1",
     model = "gpt-4o",
     timeout = 30000, -- Timeout in milliseconds
     temperature = 0,
@@ -37,15 +38,15 @@ You are an excellent programming expert.
   copilot = {
     endpoint = "https://api.githubcopilot.com",
     model = "gpt-4o-2024-05-13",
-    proxy = nil, -- [protocol://]host[:port] Use this proxy
+    proxy = nil,            -- [protocol://]host[:port] Use this proxy
     allow_insecure = false, -- Allow insecure server connections
-    timeout = 30000, -- Timeout in milliseconds
+    timeout = 30000,        -- Timeout in milliseconds
     temperature = 0,
     max_tokens = 4096,
   },
   ---@type AvanteAzureProvider
   azure = {
-    endpoint = "", -- example: "https://<your-resource-name>.openai.azure.com"
+    endpoint = "",   -- example: "https://<your-resource-name>.openai.azure.com"
     deployment = "", -- Azure deployment name (e.g., "gpt-4o", "my-gpt-4o-deployment")
     api_version = "2024-06-01",
     timeout = 30000, -- Timeout in milliseconds
@@ -151,9 +152,9 @@ You are an excellent programming expert.
   windows = {
     ---@alias AvantePosition "right" | "left" | "top" | "bottom"
     position = "right",
-    wrap = true, -- similar to vim.o.wrap
-    width = 30, -- default % based on available width in vertical layout
-    height = 30, -- default % based on available height in horizontal layout
+    wrap = true,        -- similar to vim.o.wrap
+    width = 30,         -- default % based on available width in vertical layout
+    height = 30,        -- default % based on available height in horizontal layout
     sidebar_header = {
       align = "center", -- left, center, right for title
       rounded = true,
@@ -202,13 +203,13 @@ function M.setup(opts)
     }
   )
   M.providers = vim
-    .iter(M.defaults)
-    :filter(function(_, value) return type(value) == "table" and value.endpoint ~= nil end)
-    :fold({}, function(acc, k)
-      acc = vim.list_extend({}, acc)
-      acc = vim.list_extend(acc, { k })
-      return acc
-    end)
+      .iter(M.defaults)
+      :filter(function(_, value) return type(value) == "table" and value.endpoint ~= nil end)
+      :fold({}, function(acc, k)
+        acc = vim.list_extend({}, acc)
+        acc = vim.list_extend(acc, { k })
+        return acc
+      end)
 
   vim.validate({ provider = { M.options.provider, "string", false } })
 
