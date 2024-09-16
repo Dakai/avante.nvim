@@ -92,7 +92,10 @@ Plug 'HakonHarnes/img-clip.nvim'
 Plug 'zbirenbaum/copilot.lua'
 
 " Yay, pass source=true if you want to build from source
-Plug 'yetone/avante.nvim', { 'branch': 'main', 'do': { -> avante#build() }, 'on': 'AvanteAsk' }
+Plug 'yetone/avante.nvim', { 'branch': 'main', 'do': 'make' }
+autocmd! User avante.nvim lua << EOF
+require('avante_lib').load()
+EOF
 ```
 
 </details>
@@ -231,6 +234,10 @@ _See [config.lua#L9](./lua/avante/config.lua) for the full config_
       normal = "<CR>",
       insert = "<C-s>",
     },
+    sidebar = {
+      switch_windows = "<Tab>",
+      reverse_switch_windows = "<S-Tab>",
+    },
   },
   hints = { enabled = true },
   windows = {
@@ -345,6 +352,8 @@ The following key bindings are available for use with `avante.nvim`:
 | AvanteConflictIncoming | Incoming conflict highlight | Default to `Config.highlights.diff.incoming` |
 | AvanteConflictCurrentLabel | Current conflict label highlight | Default to shade of `AvanteConflictCurrent` |
 | AvanteConflictIncomingLabel | Incoming conflict label highlight | Default to shade of `AvanteConflictIncoming` |
+| AvantePopupHint | Usage hints in popup menus | |
+| AvanteInlineHint | The end-of-line hint displayed in visual mode | |
 
 See [highlights.lua](./lua/avante/highlights.lua) for more information
 
