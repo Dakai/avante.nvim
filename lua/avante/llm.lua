@@ -60,11 +60,14 @@ M.stream = function(opts)
 
   Path.prompts.initialize(Path.prompts.get(opts.bufnr))
 
+  local filepath = Utils.relative_path(api.nvim_buf_get_name(opts.bufnr))
+
   local template_opts = {
     use_xml_format = Provider.use_xml_format,
     ask = opts.ask, -- TODO: add mode without ask instruction
     question = original_instructions,
     code_lang = opts.code_lang,
+    filepath = filepath,
     file_content = opts.file_content,
     selected_code = opts.selected_code,
     project_context = opts.project_context,
@@ -73,9 +76,9 @@ M.stream = function(opts)
 
   local user_prompts = vim
     .iter({
-      Path.prompts.render_file("_context.avanterules", template_opts),
       Path.prompts.render_file("_project.avanterules", template_opts),
       Path.prompts.render_file("_memory.avanterules", template_opts),
+      Path.prompts.render_file("_context.avanterules", template_opts),
       Path.prompts.render_mode(mode, template_opts),
     })
     :filter(function(k) return k ~= "" end)
