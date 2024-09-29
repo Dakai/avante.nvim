@@ -11,6 +11,7 @@ local Diff = require("avante.diff")
 local Llm = require("avante.llm")
 local Utils = require("avante.utils")
 local Highlights = require("avante.highlights")
+local RepoMap = require("avante.repo_map")
 
 local RESULT_BUF_NAME = "AVANTE_RESULT"
 local VIEW_BUFFER_UPDATED_PATTERN = "AvanteViewBufferUpdated"
@@ -27,7 +28,6 @@ local Sidebar = {}
 
 ---@class avante.Sidebar
 ---@field id integer
----@field registered_cmp boolean
 ---@field augroup integer
 ---@field code avante.CodeState
 ---@field winids table<string, integer> this table stores the winids of the sidebar components (result, selected_code, input), even though they are destroyed.
@@ -39,7 +39,6 @@ local Sidebar = {}
 function Sidebar:new(id)
   return setmetatable({
     id = id,
-    registered_cmp = false,
     code = { bufnr = 0, winid = 0, selection = nil },
     winids = {
       result = 0,
@@ -1297,7 +1296,7 @@ function Sidebar:create_input(opts)
 
     local file_ext = api.nvim_buf_get_name(self.code.bufnr):match("^.+%.(.+)$")
 
-    local project_context = mentions.enable_project_context and Utils.repo_map.get_repo_map(file_ext) or nil
+    local project_context = mentions.enable_project_context and RepoMap.get_repo_map(file_ext) or nil
 
     Llm.stream({
       bufnr = self.code.bufnr,
@@ -1388,14 +1387,11 @@ function Sidebar:create_input(opts)
     callback = function()
       local has_cmp, cmp = pcall(require, "cmp")
       if has_cmp then
-        if not self.registered_cmp then
-          self.registered_cmp = true
-          cmp.register_source("avante_commands", require("cmp_avante.commands").new(self))
-          cmp.register_source(
-            "avante_mentions",
-            require("cmp_avante.mentions").new(Utils.get_mentions(), self.input.bufnr)
-          )
-        end
+        cmp.register_source("avante_commands", require("cmp_avante.commands").new(self))
+        cmp.register_source(
+          "avante_mentions",
+          require("cmp_avante.mentions").new(Utils.get_mentions(), self.input.bufnr)
+        )
         cmp.setup.buffer({
           enabled = true,
           sources = {
@@ -1403,6 +1399,24 @@ function Sidebar:create_input(opts)
             { name = "avante_mentions" },
           },
         })
+      end
+    end,
+  })
+
+  -- Unregister completion
+  api.nvim_create_autocmd("BufLeave", {
+    group = self.augroup,
+    buffer = self.input.bufnr,
+    once = false,
+    desc = "Unregister the completion of helpers in the input buffer",
+    callback = function()
+      local has_cmp, cmp = pcall(require, "cmp")
+      if has_cmp then
+        for _, source in ipairs(cmp.core:get_sources()) do
+          if source.name == "avante_commands" or source.name == "avante_mentions" then
+            cmp.unregister_source(source.id)
+          end
+        end
       end
     end,
   })
