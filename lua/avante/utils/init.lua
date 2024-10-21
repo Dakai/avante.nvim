@@ -545,8 +545,8 @@ function M.get_project_root() return M.root.get() end
 
 function M.is_same_file_ext(target_ext, filepath)
   local ext = fn.fnamemodify(filepath, ":e")
-  if target_ext == "tsx" and ext == "ts" then return true end
-  if target_ext == "jsx" and ext == "js" then return true end
+  if (target_ext == "tsx" and ext == "ts") or (target_ext == "ts" and ext == "tsx") then return true end
+  if (target_ext == "jsx" and ext == "js") or (target_ext == "js" and ext == "jsx") then return true end
   return ext == target_ext
 end
 
@@ -583,7 +583,7 @@ local function pattern_to_lua(pattern)
 end
 
 function M.parse_gitignore(gitignore_path)
-  local ignore_patterns = { ".git", ".worktree", "__pycache__", "node_modules" }
+  local ignore_patterns = { "%.git", "%.worktree", "__pycache__", "node_modules" }
   local negate_patterns = {}
   local file = io.open(gitignore_path, "r")
   if not file then return ignore_patterns, negate_patterns end

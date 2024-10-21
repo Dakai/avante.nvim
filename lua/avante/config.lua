@@ -151,7 +151,7 @@ Respect and use existing conventions, libraries, etc that are already present in
       debug = "<leader>ad",
       hint = "<leader>ah",
       suggestion = "<leader>as",
-      repomap = "<leader>ar",
+      repomap = "<leader>aR",
     },
     sidebar = {
       apply_all = "A",
@@ -167,6 +167,7 @@ Respect and use existing conventions, libraries, etc that are already present in
     width = 30,         -- default % based on available width in vertical layout
     height = 30,        -- default % based on available height in horizontal layout
     sidebar_header = {
+      enabled = true, -- true, false to enable/disable the header
       align = "center", -- left, center, right for title
       rounded = true,
     },
